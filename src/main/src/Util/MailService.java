@@ -533,5 +533,60 @@ public class MailService implements Serializable
         return body;
     }
 
+    @SafeVarargs
+    public static void processForCaching(int maxFetchSize, String cachedColumnName, BiConsumer<? super Long, ? super String>... processors) throws Exception {
+        Connection connection = null;
+        Statement statement = null;
+        try {
+            connection = Transaction.begin(DATABASE_NAME);
+
+            LOG.info("Counting records...");
+            long t = System.currentTimeMillis();
+            int companiesCount = (int) CommonPeer.queryForCount(new Criteria(), EMITTENT_ID, false);
+            LOG.info(String.format("Counting performed in %s ms - there are %s records in total.", System.currentTimeMillis() - t, companiesCount));
+
+            Criteria criteria = new Criteria();
+            criteria.addSelectColumn(EMITTENT_ID);
+            criteria.addSelectColumn(cachedColumnName);
+            criteria.setDbName(DATABASE_NAME);
+            criteria.setLimit(maxFetchSize);
+
+            for (int start = 0; start < companiesCount; start += maxFetchSize) {
+                if (Thread.currentThread().isInterrupted()) {
+                    break;
+                }
+                LOG.info(String.format("Fetching records starting from record number %s.", start));
+                t = System.currentTimeMillis();
+
+                statement = connection.createStatement();
+                criteria.setOffset(start);
+                ResultSet resultSet = statement.executeQuery(createQueryString(criteria));
+
+                int count = 0;
+                while (resultSet.next() && !Thread.currentThread().isInterrupted()) {
+                    for (BiConsumer<? super Long, ? super String> processor : processors) {
+                        processor.accept(Long.valueOf(resultSet.getLong(1)), resultSet.getString(2));
+                    }
+                    count++;
+                }
+
+                resultSet.close();
+                statement.close();
+                statement = null;
+
+                LOG.info(String.format("Processed %s records in %s ms.", count, System.currentTimeMillis() - t));
+            }
+
+            Transaction.commit(connection);
+        } catch (Exception e) {
+            if (statement != null) {
+                statement.close();
+            }
+            Transaction.safeRollback(connection);
+
+            throw e;
+        }
+    }
+
 }
 
