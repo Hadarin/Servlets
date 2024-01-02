@@ -78,11 +78,7 @@ public class TestServlet extends HttpServlet {
         boolean containIdToken = httpParameters.containsKey("id_token");
         boolean containsCode = httpParameters.containsKey("code");
 
-        log.info("isPostRequest && containsErrorData || containsCode || containIdToken" +
-                isPostRequest + ":" + containsErrorData + ":" + containsCode + ":" + containIdToken);
-
         boolean res = isPostRequest && containsErrorData || containsCode || containIdToken;
-        log.info("containsAuthenticationCode=" + (res));
         return res;
     }
 
