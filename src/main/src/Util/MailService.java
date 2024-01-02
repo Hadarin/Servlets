@@ -28,6 +28,7 @@
  */
 package de.bnext.util.mail;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.bnext.persistence.om.torque.Employees;
 import de.bnext.persistence.om.torque.EmployeesPeer;
 import de.bnext.persistence.om.torque.PropertiesPeer;
@@ -63,6 +64,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -516,5 +521,17 @@ public class MailService implements Serializable
         }
         return false;
     }
+
+    public static Object getBody(HttpServletRequest request) {
+        Object body = null;
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            body = objectMapper.readValue(request.getReader(), Object.class);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return body;
+    }
+
 }
 
